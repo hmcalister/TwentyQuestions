@@ -40,17 +40,21 @@ type GameMaster struct {
 	rng *rand.Rand
 }
 
-func NewGameRouter() *chi.Mux {
-	master := gameMaster{
-		router:  chi.NewRouter(),
-		gameMap: make(map[string]*gameData),
+// Create a new Game Master and return the struct, including the router to be mounted.
+func NewGameMaster() *GameMaster {
+	master := &GameMaster{
+		Router:  chi.NewRouter(),
+		gameMap: make(map[string]*GameData),
 		rng:     rand.New(rand.NewSource(uint64(time.Now().UnixNano()))),
 	}
 
-	master.router.Get("/new", master.newGame)
-	master.router.HandleFunc("/{gameID}/*", master.handleGame)
+	// Route to make a new game.
+	master.Router.Get("/new", master.newGame)
 
-	return master.router
+	// Route to be forward to the individual game with the respective gameID.
+	master.Router.HandleFunc("/{gameID}/*", master.handleGame)
+
+	return master
 }
 
 // --------------------------------------------------------------------------------
