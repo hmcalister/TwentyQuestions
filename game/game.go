@@ -194,3 +194,40 @@ func (data *gameData) handleResponse(w http.ResponseWriter, r *http.Request) {
 		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game item template")
 	}
 }
+
+func (data *gameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	// Create a channel to send data
+	dataCh := make(chan string)
+
+	// Create a context for handling client disconnection
+	_, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	// Send data to the client
+	go func() {
+		for data := range dataCh {
+			fmt.Fprintf(w, "data: %s\n\n", data)
+			w.(http.Flusher).Flush()
+		}
+	}()
+
+	// Simulate sending data periodically
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		default:
+			var responses bytes.Buffer
+			err := gameTemplate.ExecuteTemplate(&responses, "gameItem.html", gameBaseTemplateData{QuestionAnswerPairs: data.questionAnswerPairs})
+			if err != nil {
+				log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game item template")
+			}
+			dataCh <- responses.String()
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
