@@ -61,7 +61,8 @@ func NewGameMaster() *GameMaster {
 // Utility Functions
 // --------------------------------------------------------------------------------
 
-func (master *gameMaster) randomString(length int) string {
+// Create a random string of a specific length, with runes taken from constant array letterRunes.
+func (master *GameMaster) randomString(length int) string {
 	stringRunes := make([]rune, length)
 	for i := range stringRunes {
 		stringRunes[i] = letterRunes[master.rng.Intn(len(letterRunes))]
