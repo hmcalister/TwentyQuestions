@@ -28,3 +28,13 @@ type gameMaster struct {
 	rng          *rand.Rand
 }
 
+func NewGameRouter() *chi.Mux {
+	master := gameMaster{
+		gameRouter: chi.NewRouter(),
+		gameMap:    make(map[string]*gameData),
+		rng:        rand.New(rand.NewSource(uint64(time.Now().UnixNano()))),
+	}
+
+
+	return master.gameRouter
+}
