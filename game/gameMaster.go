@@ -35,9 +35,12 @@ func NewGameRouter() *chi.Mux {
 		rng:        rand.New(rand.NewSource(uint64(time.Now().UnixNano()))),
 	}
 
+	master.gameRouter.Get("/new", master.newGame)
+	master.gameRouter.Get("/{gameID}", master.handleGame)
 
 	return master.gameRouter
 }
+
 func (master *gameMaster) newGameID() string {
 	stringRunes := make([]rune, gameID_Length)
 	for i := range stringRunes {
