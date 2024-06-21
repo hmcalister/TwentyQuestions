@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"sync"
 	"time"
@@ -18,13 +17,11 @@ const (
 )
 
 var (
-	letterRunes      = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	gameBaseTemplate = template.Must(template.New("gameBase.html").ParseFiles("templates/gameBase.html"))
-	gameItemTemplate = template.Must(template.New("gameItem.html").ParseFiles("templates/gameItem.html"))
+	letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 )
 
 type gameMaster struct {
-	gameRouter   *chi.Mux
+	router       *chi.Mux
 	gameMap      map[string]*gameData
 	gameMapMutex sync.RWMutex
 	rng          *rand.Rand
