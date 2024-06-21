@@ -295,24 +295,29 @@ func (data *GameData) handleResponse(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (data *gameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request) {
+// SSE endpoint
+func (data *GameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	// Make a new SSE client using the request context and responses channel
 	responsesChannel := make(chan string)
-	data.sseClients = append(data.sseClients, &sseClient{
+	newClient := &sseClient{
 		context:          r.Context(),
 		responsesChannel: responsesChannel,
-	})
+	}
 
-	// Send data to the client
+	// Atomically add the new client to the clients list -- mutex avoids appending to list while splicing out list in handleResponse handler.
+	data.sseClientsMutex.Lock()
+	data.sseClients = append(data.sseClients, newClient)
+	data.sseClientsMutex.Unlock()
+
+	// This goroutine terminates when responsesChannel is closed, which is handled in handleResponse handler when the client context is cancelled (client leaves).
 	go func() {
 		for responsesHTML := range responsesChannel {
 			fmt.Fprintf(w, "data: %s\n\n", responsesHTML)
 			w.(http.Flusher).Flush()
 		}
 	}()
-
-	<-r.Context().Done()
 }
