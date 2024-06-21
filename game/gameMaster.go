@@ -45,3 +45,27 @@ func (master *gameMaster) newGameID() string {
 	}
 	return string(stringRunes)
 }
+
+func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
+	var newGameID string
+
+	master.gameMapMutex.Lock()
+	for {
+		newGameID = master.newGameID()
+
+		// If the game ID already exists, try a new ID
+		if _, ok := master.gameMap[newGameID]; !ok {
+			break
+		}
+	}
+
+	newGameData := &gameData{
+		GameID: newGameID,
+	}
+	master.gameMap[newGameID] = newGameData
+	master.gameMapMutex.Unlock()
+
+	log.Info().Interface("NewGameData", newGameData).Msg("New Game Created")
+	http.Redirect(w, r, fmt.Sprintf("/game/%s", newGameData.GameID), http.StatusPermanentRedirect)
+}
+
