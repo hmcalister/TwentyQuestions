@@ -161,7 +161,15 @@ func newGameData(gameID string, oracleJWTKey []byte) *GameData {
 	return data
 }
 
-func (data *gameData) addNextQuestion(question string) error {
+// Add a new question. Returns an error if the game is currently awaiting an answer instead.
+// Change of state is handled internally by this function.
+func (data *GameData) addNextQuestion(question string) error {
+	// Ensure the game state is checked atomically.
+	//
+	// If two clients submit a question at the same time, one will get the lock and the question, and the other is turned away.
+	data.gameStateMutex.Lock()
+	defer data.gameStateMutex.Unlock()
+
 	if data.gameState != gameState_AwaitingQuestion {
 		return errors.New("not currently awaiting question")
 	}
