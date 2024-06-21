@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"time"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
@@ -98,12 +98,19 @@ type questionAnswerPair struct {
 	Answer   string
 }
 
+type sseClient struct {
+	context          context.Context
+	responsesChannel chan string
+}
+
 type gameData struct {
 	gameID              string
 	oracleJWT           oracleJWTData
 	router              *chi.Mux
 	questionAnswerPairs []questionAnswerPair
+	allResponsesHTML    string
 	gameState           gameStateEnum
+	sseClients          []*sseClient
 }
 
 func newGameData(gameID string, oracleJWT oracleJWTData) *gameData {
@@ -117,7 +124,7 @@ func newGameData(gameID string, oracleJWT oracleJWTData) *gameData {
 
 	data.router.Use(data.checkRequestFromOracleMiddleware)
 	data.router.Get("/"+data.gameID+"/", data.getGameBaseTemplate)
-	data.router.Post("/"+data.gameID+"/response", data.handleResponse)
+	data.router.Post("/"+data.gameID+"/submitResponse", data.handleResponse)
 	data.router.Get("/"+data.gameID+"/responsesSourceSSE", data.responsesSourceSSE)
 
 	return data
@@ -172,26 +179,50 @@ func (data *gameData) handleResponse(w http.ResponseWriter, r *http.Request) {
 	response := r.FormValue("response")
 	log.Debug().Str("Game ID", data.gameID).Str("Response", response).Msg("Game Response")
 
-	if response == "" {
+	if len(response) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	isOracle := r.Context().Value("IsOracle").(bool)
 	if isOracle {
 		err := data.addNextAnswer(response)
 		if err != nil {
+			log.Debug().Msg("Not Oracles Turn!")
 			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 	} else {
 		err := data.addNextQuestion(response)
 		if err != nil {
+			log.Debug().Msg("Not Guessers Turn!")
 			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 	}
 
-	err := gameTemplate.ExecuteTemplate(w, "gameItem.html", data.questionAnswerPairs[len(data.questionAnswerPairs)-1])
+	w.WriteHeader(http.StatusOK)
+
+	var updatedResponsesBytes bytes.Buffer
+	err := gameTemplate.ExecuteTemplate(&updatedResponsesBytes, "gameItem.html", gameBaseTemplateData{QuestionAnswerPairs: data.questionAnswerPairs})
 	if err != nil {
 		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game item template")
+		return
+	}
+	data.allResponsesHTML = updatedResponsesBytes.String()
+	data.allResponsesHTML = strings.ReplaceAll(data.allResponsesHTML, "\n", "")
+
+	for i := 0; i < len(data.sseClients); {
+		currentClient := data.sseClients[i]
+		select {
+		case <-currentClient.context.Done():
+			close(currentClient.responsesChannel)
+			data.sseClients[i] = data.sseClients[len(data.sseClients)-1]
+			data.sseClients = data.sseClients[:len(data.sseClients)-1]
+		default:
+			currentClient.responsesChannel <- data.allResponsesHTML
+			i += 1
+		}
 	}
 }
 
@@ -200,34 +231,19 @@ func (data *gameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	// Create a channel to send data
-	dataCh := make(chan string)
-
-	// Create a context for handling client disconnection
-	_, cancel := context.WithCancel(r.Context())
-	defer cancel()
+	responsesChannel := make(chan string)
+	data.sseClients = append(data.sseClients, &sseClient{
+		context:          r.Context(),
+		responsesChannel: responsesChannel,
+	})
 
 	// Send data to the client
 	go func() {
-		for data := range dataCh {
-			fmt.Fprintf(w, "data: %s\n\n", data)
+		for responsesHTML := range responsesChannel {
+			fmt.Fprintf(w, "data: %s\n\n", responsesHTML)
 			w.(http.Flusher).Flush()
 		}
 	}()
 
-	// Simulate sending data periodically
-	for {
-		select {
-		case <-r.Context().Done():
-			return
-		default:
-			var responses bytes.Buffer
-			err := gameTemplate.ExecuteTemplate(&responses, "gameItem.html", gameBaseTemplateData{QuestionAnswerPairs: data.questionAnswerPairs})
-			if err != nil {
-				log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game item template")
-			}
-			dataCh <- responses.String()
-			time.Sleep(1 * time.Second)
-		}
-	}
+	<-r.Context().Done()
 }
