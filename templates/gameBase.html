@@ -14,6 +14,14 @@
     <title>Twenty Questions - Game</title>
 
     <style>
+        a{
+            color: white;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
         .questionAnswerContainer {
             display: flex;
             flex-direction: row;
@@ -47,7 +55,7 @@
 
 <body>
     <main class="container">
-        <h1>Twenty Questions - {{if .IsOracle}} Oracle {{else}} Guesser {{end}}</h1>
+        <h1><a href="/">Twenty Questions</a> - {{if .IsOracle}} Oracle {{else}} Guesser {{end}}</h1>
         <hr>
         <div class="container" id="ItemContainer" hx-ext="sse" sse-connect="responsesSourceSSE" sse-swap="message">
             {{template "gameItem.html" .}}
