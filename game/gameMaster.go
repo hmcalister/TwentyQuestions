@@ -62,11 +62,7 @@ func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 
 	master.gameMapMutex.Lock()
 	for {
-		stringRunes := make([]rune, gameID_Length)
-		for i := range stringRunes {
-			stringRunes[i] = letterRunes[master.rng.Intn(len(letterRunes))]
-		}
-		gameID = string(stringRunes)
+		gameID = master.randomString(gameID_Length)
 
 		// If the game ID already exists, try a new ID
 		if _, ok := master.gameMap[gameID]; !ok {
