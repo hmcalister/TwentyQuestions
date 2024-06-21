@@ -32,5 +32,21 @@ func newGameData(gameID string) *gameData {
 
 	return data
 }
+
+// --------------------------------------------------------------------------------
+// Routing Functions
+// --------------------------------------------------------------------------------
+
+type gameBaseTemplateData struct {
 	GameID string
 }
+
+func (data *gameData) getGameBaseTemplate(w http.ResponseWriter, r *http.Request) {
+	err := gameBaseTemplate.Execute(w, gameBaseTemplateData{
+		GameID: data.GameID,
+	})
+	if err != nil {
+		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game base template")
+	}
+}
+
