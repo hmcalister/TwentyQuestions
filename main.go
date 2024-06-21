@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	"github.com/hmcalister/twentyquestions/game"
 	mymiddleware "github.com/hmcalister/twentyquestions/middleware"
 )
 
@@ -80,6 +81,13 @@ func main() {
 			log.Error().Err(err).Msg("Failed to execute indexTemplate")
 		}
 	})
+
+	// --------------------------------------------------------------------------------
+	// Game Router
+	// --------------------------------------------------------------------------------
+
+	gameRouter := game.NewGameRouter()
+	router.Mount("/game", gameRouter)
 
 	// --------------------------------------------------------------------------------
 	// Serve
