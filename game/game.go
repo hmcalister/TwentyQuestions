@@ -88,22 +88,37 @@ func (data *gameData) checkRequestFromOracleMiddleware(next http.Handler) http.H
 	})
 }
 
-type gameData struct {
-	GameID       string
-	router       *chi.Mux
-	numResponses int
+// --------------------------------------------------------------------------------
+// Game Data struct
+// --------------------------------------------------------------------------------
+
+type questionAnswerPair struct {
+	Index    int
+	Question string
+	Answer   string
 }
 
-func newGameData(gameID string) *gameData {
+type gameData struct {
+	gameID              string
+	oracleJWT           oracleJWTData
+	router              *chi.Mux
+	questionAnswerPairs []questionAnswerPair
+	gameState           gameStateEnum
+}
+
+func newGameData(gameID string, oracleJWT oracleJWTData) *gameData {
 	data := &gameData{
-		GameID:       gameID,
-		router:       chi.NewRouter(),
-		numResponses: 0,
+		gameID:              gameID,
+		oracleJWT:           oracleJWT,
+		router:              chi.NewRouter(),
+		questionAnswerPairs: make([]questionAnswerPair, 0),
+		gameState:           gameState_AwaitingQuestion,
 	}
 
-	// data.router.Get("/"+data.GameID+"/*", data.testRoute)
-	data.router.Get("/"+data.GameID+"/", data.getGameBaseTemplate)
-	data.router.Post("/"+data.GameID+"/add", data.renderNextItem)
+	data.router.Use(data.checkRequestFromOracleMiddleware)
+	data.router.Get("/"+data.gameID+"/", data.getGameBaseTemplate)
+	data.router.Post("/"+data.gameID+"/response", data.handleResponse)
+	data.router.Get("/"+data.gameID+"/responsesSourceSSE", data.responsesSourceSSE)
 
 	return data
 }
