@@ -40,35 +40,33 @@ func NewGameRouter() *chi.Mux {
 	return master.router
 }
 
-func (master *gameMaster) newGameID() string {
-	stringRunes := make([]rune, gameID_Length)
-	for i := range stringRunes {
-		stringRunes[i] = letterRunes[master.rng.Intn(len(letterRunes))]
-	}
-	return string(stringRunes)
-}
+// --------------------------------------------------------------------------------
+// Routing Functions
+// --------------------------------------------------------------------------------
 
 func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
-	var newGameID string
+	var gameID string
 
 	master.gameMapMutex.Lock()
 	for {
-		newGameID = master.newGameID()
+		stringRunes := make([]rune, gameID_Length)
+		for i := range stringRunes {
+			stringRunes[i] = letterRunes[master.rng.Intn(len(letterRunes))]
+		}
+		gameID = string(stringRunes)
 
 		// If the game ID already exists, try a new ID
-		if _, ok := master.gameMap[newGameID]; !ok {
+		if _, ok := master.gameMap[gameID]; !ok {
 			break
 		}
 	}
 
-	newGameData := &gameData{
-		GameID: newGameID,
-	}
-	master.gameMap[newGameID] = newGameData
+	data := newGameData(gameID)
+	master.gameMap[gameID] = data
 	master.gameMapMutex.Unlock()
 
-	log.Info().Interface("NewGameData", newGameData).Msg("New Game Created")
-	http.Redirect(w, r, fmt.Sprintf("/game/%s", newGameData.GameID), http.StatusPermanentRedirect)
+	log.Info().Interface("NewGameData", data).Msg("New Game Created")
+	http.Redirect(w, r, fmt.Sprintf("/game/%s/", data.GameID), http.StatusPermanentRedirect)
 }
 
 func (master *gameMaster) handleGame(w http.ResponseWriter, r *http.Request) {
