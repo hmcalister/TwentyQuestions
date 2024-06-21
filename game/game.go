@@ -25,6 +25,69 @@ const (
 	gameState_AwaitingAnswer   gameStateEnum = iota
 )
 
+// --------------------------------------------------------------------------------
+// JWT Data and Methods
+// --------------------------------------------------------------------------------
+
+type oracleJWTData struct {
+	key         []byte
+	tokenString string
+}
+
+func (data *gameData) checkRequestFromOracle(r *http.Request) bool {
+	// Ensure cookie actually exits
+
+	tokenCookie, err := r.Cookie("oracleToken-" + data.gameID)
+	if err != nil {
+		if err == http.ErrNoCookie {
+			log.Debug().Msg("Oracle JWT Check - No Token Cookie")
+		}
+		log.Debug().Msg("Oracle JWT Check - Error Reading Cookie")
+		return false
+	}
+
+	// Get claims from cookie by decoding with key
+
+	tokenString := tokenCookie.Value
+	claims := &jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+		return data.oracleJWT.key, nil
+	})
+
+	// log.Debug().Interface("JWT Claims", claims).Msg("Oracle JWT Check")
+
+	// Ensure decoding did not fail
+
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			log.Debug().Msg("Oracle JWT Check - Invalid Signature")
+		}
+		return false
+	}
+
+	// Ensure the token is still valid (e.g. not expired)
+
+	if !token.Valid {
+		log.Debug().Msg("Oracle JWT Check - Token Invalid")
+		return false
+	}
+
+	// Ensure claims match expected
+
+	if claims.Issuer != data.gameID || claims.Subject != "oracle" {
+		return false
+	}
+
+	return true
+}
+
+func (data *gameData) checkRequestFromOracleMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), "IsOracle", data.checkRequestFromOracle(r))
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 type gameData struct {
 	GameID       string
 	router       *chi.Mux
