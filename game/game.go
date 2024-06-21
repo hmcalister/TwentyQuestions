@@ -228,7 +228,10 @@ func (data *GameData) renderGameBase(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (data *gameData) handleResponse(w http.ResponseWriter, r *http.Request) {
+// Handle a response in the game -- this function handles both guesser and oracle responses.
+//
+// This function also updates the questionAnswerPairs and allResponsesHTML fields, and sends this data to all SSE clients.
+func (data *GameData) handleResponse(w http.ResponseWriter, r *http.Request) {
 	response := r.FormValue("response")
 	log.Debug().Str("Game ID", data.gameID).Str("Response", response).Msg("Game Response")
 
@@ -256,6 +259,8 @@ func (data *gameData) handleResponse(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
+	// Update the allResponseHTML field to send to all sse clients
+
 	var updatedResponsesBytes bytes.Buffer
 	err := gameTemplate.ExecuteTemplate(&updatedResponsesBytes, "gameItem.html", gameBaseTemplateData{QuestionAnswerPairs: data.questionAnswerPairs})
 	if err != nil {
@@ -265,14 +270,25 @@ func (data *gameData) handleResponse(w http.ResponseWriter, r *http.Request) {
 	data.allResponsesHTML = updatedResponsesBytes.String()
 	data.allResponsesHTML = strings.ReplaceAll(data.allResponsesHTML, "\n", "")
 
+	// Loop over clients, splice out any that are closed, send to any that are alive.
+
+	data.sseClientsMutex.Lock()
+	defer data.sseClientsMutex.Unlock()
+
+	// Note this loop does NOT always increment i, as sometimes we splice out a done client and must repeat that index.
+	// If we splice out the last client, the i will now be equal to len(data.sseClients) so the loop will terminate, not overrun its bounds
 	for i := 0; i < len(data.sseClients); {
 		currentClient := data.sseClients[i]
 		select {
+		// If this client is done, the context is cancelled, and we can close the response channel to clean up some goroutines.
 		case <-currentClient.context.Done():
 			close(currentClient.responsesChannel)
+			// Splice out the done client with the end client. Then remove the end client.
+			// This requires us to look at the current index again, so don't update i.
 			data.sseClients[i] = data.sseClients[len(data.sseClients)-1]
 			data.sseClients = data.sseClients[:len(data.sseClients)-1]
 		default:
+			// This client is still alive, send them the new HTML and move to the next client.
 			currentClient.responsesChannel <- data.allResponsesHTML
 			i += 1
 		}
