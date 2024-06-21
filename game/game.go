@@ -19,5 +19,18 @@ type gameData struct {
 	numResponses int
 }
 
+func newGameData(gameID string) *gameData {
+	data := &gameData{
+		GameID:       gameID,
+		router:       chi.NewRouter(),
+		numResponses: 0,
+	}
+
+	// data.router.Get("/"+data.GameID+"/*", data.testRoute)
+	data.router.Get("/"+data.GameID+"/", data.getGameBaseTemplate)
+	data.router.Post("/"+data.GameID+"/add", data.renderNextItem)
+
+	return data
+}
 	GameID string
 }
