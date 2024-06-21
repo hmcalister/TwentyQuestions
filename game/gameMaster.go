@@ -86,6 +86,7 @@ func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	// Lock the entire gameMapMutex until we are finished making the game, to avoid the (slim) chance we generate the same ID twice.
 	master.gameMapMutex.Lock()
 	for {
+
 		gameID = master.randomString(gameIDLength)
 
 		// If the game ID already exists, try a new ID
@@ -134,8 +135,8 @@ func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 func (master *GameMaster) handleGame(w http.ResponseWriter, r *http.Request) {
 	gameIDParam := chi.URLParam(r, "gameID")
 	master.gameMapMutex.RLock()
-	defer master.gameMapMutex.RUnlock()
 	targetGameData, ok := master.gameMap[gameIDParam]
+	master.gameMapMutex.RUnlock()
 
 	// If the requested GameID does not exist, return a 404
 	if !ok {
