@@ -95,25 +95,48 @@ func (data *GameData) checkRequestFromOracleMiddleware(next http.Handler) http.H
 // Game Data struct
 // --------------------------------------------------------------------------------
 
+// Question and Answer pairs -- kept for ease of template parsing.
 type questionAnswerPair struct {
 	Index    int
 	Question string
 	Answer   string
 }
 
+// Server Sent Event client -- to return the question and answers to the clients as responses roll in.
 type sseClient struct {
-	context          context.Context
+	// Context, with cancel indicating if the client has left.
+	context context.Context
+
+	// Channel to write responses back to user (ensure no newlines!!). Must not be sent data if context is done.
 	responsesChannel chan string
 }
 
-type gameData struct {
-	gameID              string
-	oracleJWT           oracleJWTData
-	router              *chi.Mux
+// Data representing an individual game.
+type GameData struct {
+	gameID string
+
+	// Signing key for the oracle JWT.
+	oracleJWTKey []byte
+
+	router *chi.Mux
+
+	// Current state of game -- switches between awaiting question and awaiting answer.
+	gameState gameStateEnum
+
+	// Mutex to ensure atomic read and write of the game state -- prevents double questions in edge cases.
+	gameStateMutex sync.Mutex
+
+	// All question answer pairs in this game.
 	questionAnswerPairs []questionAnswerPair
-	allResponsesHTML    string
-	gameState           gameStateEnum
-	sseClients          []*sseClient
+
+	// String to store current HTML of question answer pairs, to avoid recomputation for every SSE client.
+	allResponsesHTML string
+
+	// Array of all sseClients -- pruned of closed clients when next event is sent.
+	sseClients []*sseClient
+
+	// Mutex to ensure atomic handling of SSE clients -- we don't want to accidentally miss a client!
+	sseClientsMutex sync.Mutex
 }
 
 func newGameData(gameID string, oracleJWT oracleJWTData) *gameData {
