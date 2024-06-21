@@ -74,7 +74,8 @@ func (master *GameMaster) randomString(length int) string {
 // Routing Functions
 // --------------------------------------------------------------------------------
 
-func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
+// http handler to create a new game. Game is added atomically to the game map, and hence is accessible from /{gameID}/*.
+func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	var gameID string
 
 	master.gameMapMutex.Lock()
