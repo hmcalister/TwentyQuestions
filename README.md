@@ -1,6 +1,6 @@
 # Twenty Questions
 
-## [Try the game here](htttps://https://www.twentyquestions.hmcalister.nz/)
+## [Try the game here](https://https://www.twentyquestions.hmcalister.nz/)
 
 An implementation of Twenty Questions, a guessing game based around asking questions to an oracle to identify an object or concept.
 
