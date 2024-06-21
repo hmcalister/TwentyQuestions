@@ -38,3 +38,10 @@ func NewGameRouter() *chi.Mux {
 
 	return master.gameRouter
 }
+func (master *gameMaster) newGameID() string {
+	stringRunes := make([]rune, gameID_Length)
+	for i := range stringRunes {
+		stringRunes[i] = letterRunes[master.rng.Intn(len(letterRunes))]
+	}
+	return string(stringRunes)
+}
