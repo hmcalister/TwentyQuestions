@@ -152,31 +152,44 @@ func (data *gameData) addNextAnswer(answer string) error {
 // --------------------------------------------------------------------------------
 
 type gameBaseTemplateData struct {
-	GameID string
+	GameID              string
+	IsOracle            bool
+	QuestionAnswerPairs []questionAnswerPair
 }
 
 func (data *gameData) getGameBaseTemplate(w http.ResponseWriter, r *http.Request) {
-	err := gameBaseTemplate.Execute(w, gameBaseTemplateData{
-		GameID: data.GameID,
+	err := gameTemplate.ExecuteTemplate(w, "gameBase.html", gameBaseTemplateData{
+		GameID:              data.gameID,
+		IsOracle:            r.Context().Value("IsOracle").(bool),
+		QuestionAnswerPairs: data.questionAnswerPairs,
 	})
 	if err != nil {
 		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game base template")
 	}
 }
 
-type gameItemTemplateData struct {
-	GameID     string
-	ItemNumber int
-}
+func (data *gameData) handleResponse(w http.ResponseWriter, r *http.Request) {
+	response := r.FormValue("response")
+	log.Debug().Str("Game ID", data.gameID).Str("Response", response).Msg("Game Response")
 
-func (data *gameData) renderNextItem(w http.ResponseWriter, r *http.Request) {
-	data.numResponses += 1
-	itemTemplateData := gameItemTemplateData{
-		GameID:     data.GameID,
-		ItemNumber: data.numResponses,
+	if response == "" {
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	err := gameItemTemplate.Execute(w, itemTemplateData)
+	isOracle := r.Context().Value("IsOracle").(bool)
+	if isOracle {
+		err := data.addNextAnswer(response)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	} else {
+		err := data.addNextQuestion(response)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}
+
+	err := gameTemplate.ExecuteTemplate(w, "gameItem.html", data.questionAnswerPairs[len(data.questionAnswerPairs)-1])
 	if err != nil {
 		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game item template")
 	}
