@@ -21,14 +21,23 @@ const (
 )
 
 var (
+	// The possible letters to use in a random string.
 	letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 )
 
-type gameMaster struct {
-	router       *chi.Mux
-	gameMap      map[string]*gameData
+// Struct to manage the individual games. Has functions to create new games, and forward requests to game routers.
+type GameMaster struct {
+	// The Router for the overall game routes, such as /game/new.
+	Router *chi.Mux
+
+	// Map of the games currently alive. Maps from GameID to a gameData.
+	gameMap map[string]*GameData
+
+	// Mutex to handle async writing and reading from the game map.
 	gameMapMutex sync.RWMutex
-	rng          *rand.Rand
+
+	// Random number generator for the game master.
+	rng *rand.Rand
 }
 
 func NewGameRouter() *chi.Mux {
