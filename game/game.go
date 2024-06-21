@@ -50,3 +50,20 @@ func (data *gameData) getGameBaseTemplate(w http.ResponseWriter, r *http.Request
 	}
 }
 
+type gameItemTemplateData struct {
+	GameID     string
+	ItemNumber int
+}
+
+func (data *gameData) renderNextItem(w http.ResponseWriter, r *http.Request) {
+	data.numResponses += 1
+	itemTemplateData := gameItemTemplateData{
+		GameID:     data.GameID,
+		ItemNumber: data.numResponses,
+	}
+
+	err := gameItemTemplate.Execute(w, itemTemplateData)
+	if err != nil {
+		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game item template")
+	}
+}
