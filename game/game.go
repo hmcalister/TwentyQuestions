@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,9 +16,11 @@ import (
 )
 
 var (
+	// Templates for Game page.
 	gameTemplate = template.Must(template.ParseFiles("templates/gameBase.html", "templates/gameItem.html"))
 )
 
+// Enum for gameState, determining what is required next.
 type gameStateEnum int
 
 const (
