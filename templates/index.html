@@ -3,10 +3,13 @@
 
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark" />
-  <link rel="stylesheet" href="static/pico.purple.min.css" />
-  <title>Twenty Questions</title>
+  <link rel="stylesheet" href="/static/pico.purple.min.css" />
+  <title>Twenty Questions - Home</title>
 
   <style>
     #newGameButtonContainer {
@@ -26,9 +29,9 @@
     <h1>Twenty Questions</h1>
     <hr>
     <p>Start a new game as the oracle, then send game link to a friend to start guessing.</p>
-    <div id="newGameButtonContainer">
-      <button id="newGameButton">New Game</button>
-    </div>
+    <form id="newGameButtonContainer" action="/game/new">
+      <button id="newGameButton" type="submit">New Game</button>
+    </form>
   </main>
 </body>
 
