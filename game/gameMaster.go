@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/exp/rand"
 )
@@ -38,6 +39,18 @@ func NewGameRouter() *chi.Mux {
 	master.router.HandleFunc("/{gameID}/*", master.handleGame)
 
 	return master.router
+}
+
+// --------------------------------------------------------------------------------
+// Utility Functions
+// --------------------------------------------------------------------------------
+
+func (master *gameMaster) randomString(length int) string {
+	stringRunes := make([]rune, length)
+	for i := range stringRunes {
+		stringRunes[i] = letterRunes[master.rng.Intn(len(letterRunes))]
+	}
+	return string(stringRunes)
 }
 
 // --------------------------------------------------------------------------------
