@@ -2,27 +2,58 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark" />
-  <link rel="stylesheet" href="/static/pico.purple.min.css" />
-  <title>Twenty Questions - Game</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="/static/pico.purple.min.css" />
+    <script src="/static/htmx.js"></script>
+    <title>Twenty Questions - Game</title>
 
-  <style>
-  </style>
+    <style>
+        .questionAnswerContainer {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .questionData {
+            width: 60%;
+        }
+
+        .answerData {
+            width: 38%;
+        }
+
+        #FooterItems {
+        }
+
+        #ItemContainer {
+            display: flex;
+            flex-direction: column-reverse;
+            overflow: scroll;
+            height: 80vh;
+        }
+
+        button {
+            width: 100%;
+        }
+    </style>
 </head>
 
 <body>
-  <main class="container">
-    <h1>Twenty Questions</h1>
-    <hr>
-    <div class="container" id="ItemContainer">
+    <main class="container">
+        <h1>Twenty Questions - Game</h1>
+        <hr>
+        <div class="container" id="ItemContainer">
 
-    </div>
-  </main>
+        </div>
+        <div id="FooterItems">
+            <button hx-post="add" hx-target="#ItemContainer" hx-swap="afterbegin">Add Item</button>
+        </div>
+    </main>
 </body>
 
 </html>
