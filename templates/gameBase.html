@@ -14,10 +14,11 @@
     <title>Twenty Questions - Game</title>
 
     <style>
-        a{
+        a {
             color: white;
             text-decoration: none;
         }
+
         a:hover {
             text-decoration: underline;
         }
@@ -40,16 +41,45 @@
             display: flex;
             flex-direction: column;
             overflow: scroll;
-            height: 70vh;
+            height: 60vh;
         }
 
-        #FooterItems {}
+        #FooterItems {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: stretch;
+            gap: 2em;
+        }
 
+        #FooterItems form {
+            flex-grow: 2;
+        }
 
-
-        #FooterItems * {
+        #FooterItems form>* {
             width: 100%;
         }
+
+        .oracleVerdictButton {
+            min-width: 10em;
+            border: none;
+            height: 100%;
+        }
+
+        .gameovercard{
+            height: 5em;
+            text-align: center;
+        }
+
+        .correctColorBackground {
+            background-color: #2C6C0C;
+        }
+
+        .incorrectColorBackground {
+            background-color: #861D13;
+        }
+
     </style>
 </head>
 
@@ -58,13 +88,20 @@
         <h1><a href="/">Twenty Questions</a> - {{if .IsOracle}} Oracle {{else}} Guesser {{end}}</h1>
         <hr>
         <div class="container" id="ItemContainer" hx-ext="sse" sse-connect="responsesSourceSSE" sse-swap="message">
-            {{template "gameItem.html" .}}
+            
         </div>
         <div id="FooterItems">
             <form autocomplete="off">
-                <input type="text" id="response", name="response" {{if .IsOracle}} placeholder="Answer..." {{else}} placeholder="Question..." {{end}}>
+                <input type="text" id="response" , name="response" {{if .IsOracle}} placeholder="Answer..." {{else}}
+                    placeholder="Question..." {{end}}>
                 <button hx-post="submitResponse" hx-swap="none">Submit</button>
             </form>
+            {{if .IsOracle}}
+            <div>
+                <button hx-get="oracleVerdictCorrect" hx-confirm="Are you sure you want to end the game with a 'Correct' verdict?" hx-target="#ItemContainer" hx-swap="beforeend" class="oracleVerdictButton correctColorBackground">Correct</button>
+                <button hx-get="oracleVerdictIncorrect" hx-confirm="Are you sure you want to end the game with an 'Incorrect' verdict?" hx-target="#ItemContainer" hx-swap="beforeend" class="oracleVerdictButton incorrectColorBackground">Incorrect</button>
+            </div>
+            {{end}}
         </div>
     </main>
 </body>
