@@ -125,7 +125,8 @@ func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/game/%s/", data.gameID), http.StatusPermanentRedirect)
 }
 
-func (master *gameMaster) handleGame(w http.ResponseWriter, r *http.Request) {
+// http handler to forward requests to a specific game -- or 404 if the gameID is not in the map.
+func (master *GameMaster) handleGame(w http.ResponseWriter, r *http.Request) {
 	gameIDParam := chi.URLParam(r, "gameID")
 	master.gameMapMutex.RLock()
 	defer master.gameMapMutex.RUnlock()
