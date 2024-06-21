@@ -70,7 +70,20 @@ func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	data := newGameData(gameID)
+	oracleJWTKey := []byte(master.randomString(64))
+	oracleJWTExpiry := time.Now().Add(game_maxDuration)
+	oracleJWTClaims := &jwt.RegisteredClaims{
+		Issuer:    gameID,
+		Subject:   "oracle",
+		ExpiresAt: jwt.NewNumericDate(oracleJWTExpiry),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, oracleJWTClaims)
+	oracleJWTTokenString, _ := token.SignedString(oracleJWTKey)
+
+	data := newGameData(gameID, oracleJWTData{
+		key:         oracleJWTKey,
+		tokenString: oracleJWTTokenString,
+	})
 	master.gameMap[gameID] = data
 	master.gameMapMutex.Unlock()
 
