@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -16,7 +17,7 @@ import (
 )
 
 var (
-	indexTemplate    = template.Must(template.New("index.html").ParseFiles("templates/index.html"))
+	indexTemplate = template.Must(template.New("index.html").ParseFiles("templates/index.html"))
 )
 
 func main() {
@@ -60,6 +61,7 @@ func main() {
 	router := chi.NewRouter()
 	router.Use(mymiddleware.ZerologLogger)
 	router.Use(mymiddleware.RecoverWithInternalServerError)
+	router.Use(middleware.NoCache)
 
 	// --------------------------------------------------------------------------------
 	// Static directory
