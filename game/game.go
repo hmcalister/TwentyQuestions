@@ -32,18 +32,15 @@ const (
 // JWT Data and Methods
 // --------------------------------------------------------------------------------
 
-type oracleJWTData struct {
-	key         []byte
-	tokenString string
-}
-
-func (data *gameData) checkRequestFromOracle(r *http.Request) bool {
+// Check a request for the JWT to authenticate the oracle.
+func (data *GameData) checkRequestFromOracle(r *http.Request) bool {
 	// Ensure cookie actually exits
 
-	tokenCookie, err := r.Cookie("oracleToken-" + data.gameID)
+	tokenCookie, err := r.Cookie(data.gameID)
 	if err != nil {
 		if err == http.ErrNoCookie {
 			log.Debug().Msg("Oracle JWT Check - No Token Cookie")
+			return false
 		}
 		log.Debug().Msg("Oracle JWT Check - Error Reading Cookie")
 		return false
@@ -54,7 +51,7 @@ func (data *gameData) checkRequestFromOracle(r *http.Request) bool {
 	tokenString := tokenCookie.Value
 	claims := &jwt.RegisteredClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
-		return data.oracleJWT.key, nil
+		return data.oracleJWTKey, nil
 	})
 
 	// log.Debug().Interface("JWT Claims", claims).Msg("Oracle JWT Check")
@@ -64,7 +61,9 @@ func (data *gameData) checkRequestFromOracle(r *http.Request) bool {
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
 			log.Debug().Msg("Oracle JWT Check - Invalid Signature")
+			return false
 		}
+		log.Debug().Msg("Oracle JWT Check - Other Token Parse Error")
 		return false
 	}
 
