@@ -1,16 +1,28 @@
 package game
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
 )
 
 var (
-	gameBaseTemplate = template.Must(template.New("gameBase.html").ParseFiles("templates/gameBase.html"))
-	gameItemTemplate = template.Must(template.New("gameItem.html").ParseFiles("templates/gameItem.html"))
+	gameTemplate = template.Must(template.ParseFiles("templates/gameBase.html", "templates/gameItem.html"))
+)
+
+type gameStateEnum int
+
+const (
+	gameState_AwaitingQuestion gameStateEnum = iota
+	gameState_AwaitingAnswer   gameStateEnum = iota
 )
 
 type gameData struct {
