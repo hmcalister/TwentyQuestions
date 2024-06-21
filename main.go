@@ -86,8 +86,8 @@ func main() {
 	// Game Router
 	// --------------------------------------------------------------------------------
 
-	gameRouter := game.NewGameRouter()
-	router.Mount("/game", gameRouter)
+	gameRouter := game.NewGameMaster()
+	router.Mount("/game", gameRouter.Router)
 
 	// --------------------------------------------------------------------------------
 	// Serve
