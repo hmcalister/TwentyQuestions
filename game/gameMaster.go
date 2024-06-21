@@ -87,8 +87,14 @@ func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	master.gameMap[gameID] = data
 	master.gameMapMutex.Unlock()
 
-	log.Info().Interface("NewGameData", data).Msg("New Game Created")
-	http.Redirect(w, r, fmt.Sprintf("/game/%s/", data.GameID), http.StatusPermanentRedirect)
+	log.Info().Str("NewGameID", gameID).Msg("New Game Created")
+	http.SetCookie(w, &http.Cookie{
+		Name:     "oracleToken-" + gameID,
+		Value:    oracleJWTTokenString,
+		Expires:  oracleJWTExpiry,
+		HttpOnly: true,
+	})
+	http.Redirect(w, r, fmt.Sprintf("/game/%s/", data.gameID), http.StatusPermanentRedirect)
 }
 
 func (master *gameMaster) handleGame(w http.ResponseWriter, r *http.Request) {
