@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/rs/zerolog/log"
 )
 
@@ -132,6 +133,9 @@ type GameData struct {
 	// String to store current HTML of question answer pairs, to avoid recomputation for every SSE client.
 	allResponsesHTML string
 
+	// BlueMonday HTML Sanitizer -- ensures user input is clean before sending to other clients.
+	htmlSanitizer *bluemonday.Policy
+
 	// Array of all sseClients -- pruned of closed clients when next event is sent.
 	sseClients []*sseClient
 
@@ -140,7 +144,7 @@ type GameData struct {
 }
 
 // Create a new game data, including registering routes on router.
-func newGameData(gameID string, oracleJWTKey []byte) *GameData {
+func newGameData(gameID string, oracleJWTKey []byte, htmlSanitizer *bluemonday.Policy) *GameData {
 	data := &GameData{
 		gameID:              gameID,
 		oracleJWTKey:        oracleJWTKey,
@@ -148,6 +152,7 @@ func newGameData(gameID string, oracleJWTKey []byte) *GameData {
 		gameState:           gameState_AwaitingQuestion,
 		questionAnswerPairs: make([]questionAnswerPair, 0),
 		allResponsesHTML:    "",
+		htmlSanitizer:       htmlSanitizer,
 		sseClients:          make([]*sseClient, 0),
 	}
 
@@ -232,7 +237,7 @@ func (data *GameData) renderGameBase(w http.ResponseWriter, r *http.Request) {
 //
 // This function also updates the questionAnswerPairs and allResponsesHTML fields, and sends this data to all SSE clients.
 func (data *GameData) handleResponse(w http.ResponseWriter, r *http.Request) {
-	response := r.FormValue("response")
+	response := data.htmlSanitizer.Sanitize(r.FormValue("response"))
 	log.Debug().Str("Game ID", data.gameID).Str("Response", response).Msg("Game Response")
 
 	if len(response) == 0 {
