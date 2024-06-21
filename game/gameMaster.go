@@ -19,6 +19,8 @@ const (
 
 var (
 	letterRunes      = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	gameBaseTemplate = template.Must(template.New("gameBase.html").ParseFiles("templates/gameBase.html"))
+	gameItemTemplate = template.Must(template.New("gameItem.html").ParseFiles("templates/gameItem.html"))
 )
 
 type gameMaster struct {
