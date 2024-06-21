@@ -30,7 +30,7 @@
 
         #ItemContainer {
             display: flex;
-            flex-direction: column-reverse;
+            flex-direction: column;
             overflow: scroll;
             height: 70vh;
         }
@@ -39,7 +39,7 @@
 
 
 
-        #FooterItems>* {
+        #FooterItems * {
             width: 100%;
         }
     </style>
@@ -50,16 +50,13 @@
         <h1>Twenty Questions - {{if .IsOracle}} Oracle {{else}} Guesser {{end}}</h1>
         <hr>
         <div class="container" id="ItemContainer" hx-ext="sse" sse-connect="responsesSourceSSE" sse-swap="message">
-            {{template "gameItem.html" .QuestionAnswerPairs}}
+            {{template "gameItem.html" .}}
         </div>
         <div id="FooterItems">
-            {{if .IsOracle}}
-            <input type="text" id="response", name="response" placeholder="Answer...">
-            <button hx-post="response" hx-target="#ItemContainer>questionAnswerContainer:lastChild">Submit Answer</button>
-            {{else}}
-            <input type="text" id="response", name="response" placeholder="Question...">
-            <button hx-post="response" hx-target="#ItemContainer" hx-swap="afterbegin">Submit Question</button>
-            {{end}}
+            <form autocomplete="off">
+                <input type="text" id="response", name="response" {{if .IsOracle}} placeholder="Answer..." {{else}} placeholder="Question..." {{end}}>
+                <button hx-post="submitResponse" hx-swap="none">Submit</button>
+            </form>
         </div>
     </main>
 </body>
