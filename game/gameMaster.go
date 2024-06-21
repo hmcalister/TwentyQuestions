@@ -87,6 +87,14 @@ func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	master.gameMap[gameID] = data
 	master.gameMapMutex.Unlock()
 
+	go func() {
+		<-time.After(game_maxDuration)
+		log.Info().Str("GameID", gameID).Msg("Deleting Game")
+		master.gameMapMutex.Lock()
+		delete(master.gameMap, gameID)
+		master.gameMapMutex.Unlock()
+	}()
+
 	log.Info().Str("NewGameID", gameID).Msg("New Game Created")
 	http.SetCookie(w, &http.Cookie{
 		Name:     "oracleToken-" + gameID,
