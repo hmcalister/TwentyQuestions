@@ -47,13 +47,19 @@
 
 <body>
     <main class="container">
-        <h1>Twenty Questions - Game</h1>
+        <h1>Twenty Questions - {{if .IsOracle}} Oracle {{else}} Guesser {{end}}</h1>
         <hr>
-        <div class="container" id="ItemContainer">
-
+        <div class="container" id="ItemContainer" hx-ext="sse" sse-connect="responsesSourceSSE" sse-swap="message">
+            {{template "gameItem.html" .QuestionAnswerPairs}}
         </div>
         <div id="FooterItems">
-            <button hx-post="add" hx-target="#ItemContainer" hx-swap="afterbegin">Add Item</button>
+            {{if .IsOracle}}
+            <input type="text" id="response", name="response" placeholder="Answer...">
+            <button hx-post="response" hx-target="#ItemContainer>questionAnswerContainer:lastChild">Submit Answer</button>
+            {{else}}
+            <input type="text" id="response", name="response" placeholder="Question...">
+            <button hx-post="response" hx-target="#ItemContainer" hx-swap="afterbegin">Submit Question</button>
+            {{end}}
         </div>
     </main>
 </body>
