@@ -34,10 +34,10 @@ func NewGameRouter() *chi.Mux {
 		rng:     rand.New(rand.NewSource(uint64(time.Now().UnixNano()))),
 	}
 
-	master.gameRouter.Get("/new", master.newGame)
-	master.gameRouter.Get("/{gameID}", master.handleGame)
+	master.router.Get("/new", master.newGame)
+	master.router.HandleFunc("/{gameID}/*", master.handleGame)
 
-	return master.gameRouter
+	return master.router
 }
 
 func (master *gameMaster) newGameID() string {
