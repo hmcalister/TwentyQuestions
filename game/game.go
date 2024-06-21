@@ -18,7 +18,7 @@ import (
 
 var (
 	// Templates for Game page.
-	gameTemplate = template.Must(template.ParseFiles("templates/gameBase.html", "templates/gameItem.html"))
+	gameTemplate = template.Must(template.ParseFiles("templates/gameBase.html", "templates/gameItem.html", "templates/gameOver.html"))
 )
 
 // Enum for gameState, determining what is required next.
@@ -27,6 +27,7 @@ type gameStateEnum int
 const (
 	gameState_AwaitingQuestion gameStateEnum = iota
 	gameState_AwaitingAnswer   gameStateEnum = iota
+	gameState_GameOver         gameStateEnum = iota
 )
 
 // --------------------------------------------------------------------------------
@@ -162,6 +163,8 @@ func newGameData(gameID string, oracleJWTKey []byte, htmlSanitizer *bluemonday.P
 	data.router.Get("/"+data.gameID+"/", data.renderGameBase)
 	data.router.Post("/"+data.gameID+"/submitResponse", data.handleResponse)
 	data.router.Get("/"+data.gameID+"/responsesSourceSSE", data.responsesSourceSSE)
+	data.router.Get("/"+data.gameID+"/oracleVerdictCorrect", data.oracleVerdictCorrect)
+	data.router.Get("/"+data.gameID+"/oracleVerdictIncorrect", data.oracleVerdictIncorrect)
 
 	return data
 }
@@ -214,18 +217,14 @@ func (data *GameData) addNextAnswer(answer string) error {
 type gameBaseTemplateData struct {
 	GameID   string
 	IsOracle bool
-
-	// Note this data is passed to gameItem.html template
-	QuestionAnswerPairs []questionAnswerPair
 }
 
 // Render the game base -- should the first call to the game router.
 func (data *GameData) renderGameBase(w http.ResponseWriter, r *http.Request) {
 	// Render the template with all current data. Ensures late players still get all previous questions and answers.
 	err := gameTemplate.ExecuteTemplate(w, "gameBase.html", gameBaseTemplateData{
-		GameID:              data.gameID,
-		IsOracle:            r.Context().Value("IsOracle").(bool),
-		QuestionAnswerPairs: data.questionAnswerPairs,
+		GameID:   data.gameID,
+		IsOracle: r.Context().Value("IsOracle").(bool),
 	})
 	if err != nil {
 		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game base template")
@@ -237,10 +236,11 @@ func (data *GameData) renderGameBase(w http.ResponseWriter, r *http.Request) {
 //
 // This function also updates the questionAnswerPairs and allResponsesHTML fields, and sends this data to all SSE clients.
 func (data *GameData) handleResponse(w http.ResponseWriter, r *http.Request) {
-	response := data.htmlSanitizer.Sanitize(r.FormValue("response"))
+	response := r.FormValue("response")
+	// response := data.htmlSanitizer.Sanitize(r.FormValue("response"))
 	log.Debug().Str("Game ID", data.gameID).Str("Response", response).Msg("Game Response")
 
-	if len(response) == 0 {
+	if len(response) == 0 || data.gameState == gameState_GameOver {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -267,7 +267,7 @@ func (data *GameData) handleResponse(w http.ResponseWriter, r *http.Request) {
 	// Update the allResponseHTML field to send to all sse clients
 
 	var updatedResponsesBytes bytes.Buffer
-	err := gameTemplate.ExecuteTemplate(&updatedResponsesBytes, "gameItem.html", gameBaseTemplateData{QuestionAnswerPairs: data.questionAnswerPairs})
+	err := gameTemplate.ExecuteTemplate(&updatedResponsesBytes, "gameItem.html", data.questionAnswerPairs)
 	if err != nil {
 		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game item template")
 		return
@@ -326,6 +326,101 @@ func (data *GameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request)
 		}
 	}()
 
+	// Send the current allResponsesHTML to initialize the client
+	responsesChannel <- data.allResponsesHTML
+
 	// Block return until the response is canceled -- ensures the client only makes ONE connection, rather than continually polling.
 	<-r.Context().Done()
+}
+
+// Used when the oracle ends the game with a correct verdict
+func (data *GameData) oracleVerdictCorrect(w http.ResponseWriter, r *http.Request) {
+	isOracle := r.Context().Value("IsOracle").(bool)
+	if !isOracle {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if data.gameState == gameState_GameOver {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	data.gameState = gameState_GameOver
+
+	var updatedResponsesBytes bytes.Buffer
+	err := gameTemplate.ExecuteTemplate(&updatedResponsesBytes, "gameOver.html", true)
+	if err != nil {
+		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game over template")
+		return
+	}
+	data.allResponsesHTML += updatedResponsesBytes.String()
+	data.allResponsesHTML = strings.ReplaceAll(data.allResponsesHTML, "\n", "")
+
+	data.sseClientsMutex.Lock()
+	defer data.sseClientsMutex.Unlock()
+
+	for i := 0; i < len(data.sseClients); {
+		currentClient := data.sseClients[i]
+		select {
+		// If this client is done, the context is cancelled, and we can close the response channel to clean up some goroutines.
+		case <-currentClient.context.Done():
+			close(currentClient.responsesChannel)
+			// Splice out the done client with the end client. Then remove the end client.
+			// This requires us to look at the current index again, so don't update i.
+			data.sseClients[i] = data.sseClients[len(data.sseClients)-1]
+			data.sseClients = data.sseClients[:len(data.sseClients)-1]
+		default:
+			// This client is still alive, send them the new HTML and move to the next client.
+			currentClient.responsesChannel <- data.allResponsesHTML
+			currentClient.context.Done()
+			i += 1
+		}
+	}
+}
+
+// Used when the oracle ends the game with an incorrect verdict
+func (data *GameData) oracleVerdictIncorrect(w http.ResponseWriter, r *http.Request) {
+	isOracle := r.Context().Value("IsOracle").(bool)
+	if !isOracle {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if data.gameState == gameState_GameOver {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	data.gameState = gameState_GameOver
+
+	var updatedResponsesBytes bytes.Buffer
+	err := gameTemplate.ExecuteTemplate(&updatedResponsesBytes, "gameOver.html", false)
+	if err != nil {
+		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game over template")
+		return
+	}
+	data.allResponsesHTML += updatedResponsesBytes.String()
+	data.allResponsesHTML = strings.ReplaceAll(data.allResponsesHTML, "\n", "")
+
+	data.sseClientsMutex.Lock()
+	defer data.sseClientsMutex.Unlock()
+
+	for i := 0; i < len(data.sseClients); {
+		currentClient := data.sseClients[i]
+		select {
+		// If this client is done, the context is cancelled, and we can close the response channel to clean up some goroutines.
+		case <-currentClient.context.Done():
+			close(currentClient.responsesChannel)
+			// Splice out the done client with the end client. Then remove the end client.
+			// This requires us to look at the current index again, so don't update i.
+			data.sseClients[i] = data.sseClients[len(data.sseClients)-1]
+			data.sseClients = data.sseClients[:len(data.sseClients)-1]
+		default:
+			// This client is still alive, send them the new HTML and move to the next client.
+			currentClient.responsesChannel <- data.allResponsesHTML
+			currentClient.context.Done()
+			i += 1
+		}
+	}
 }
