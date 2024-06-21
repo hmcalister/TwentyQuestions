@@ -12,6 +12,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	mymiddleware "github.com/hmcalister/twentyquestions/middleware"
+)
+
 var (
 	indexTemplate    = template.Must(template.New("index.html").ParseFiles("templates/index.html"))
 )
@@ -55,6 +58,9 @@ func main() {
 	// --------------------------------------------------------------------------------
 
 	router := chi.NewRouter()
+	router.Use(mymiddleware.ZerologLogger)
+	router.Use(mymiddleware.RecoverWithInternalServerError)
+
 	// --------------------------------------------------------------------------------
 	// Serve
 	// --------------------------------------------------------------------------------
