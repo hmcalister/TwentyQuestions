@@ -320,4 +320,7 @@ func (data *GameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request)
 			w.(http.Flusher).Flush()
 		}
 	}()
+
+	// Block return until the response is canceled -- ensures the client only makes ONE connection, rather than continually polling.
+	<-r.Context().Done()
 }
