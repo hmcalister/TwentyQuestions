@@ -29,9 +29,9 @@ type gameMaster struct {
 
 func NewGameRouter() *chi.Mux {
 	master := gameMaster{
-		gameRouter: chi.NewRouter(),
-		gameMap:    make(map[string]*gameData),
-		rng:        rand.New(rand.NewSource(uint64(time.Now().UnixNano()))),
+		router:  chi.NewRouter(),
+		gameMap: make(map[string]*gameData),
+		rng:     rand.New(rand.NewSource(uint64(time.Now().UnixNano()))),
 	}
 
 	master.gameRouter.Get("/new", master.newGame)
