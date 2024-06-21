@@ -205,13 +205,18 @@ func (data *GameData) addNextAnswer(answer string) error {
 // Routing Functions
 // --------------------------------------------------------------------------------
 
+// Data to be passed to gameBase.html template
 type gameBaseTemplateData struct {
-	GameID              string
-	IsOracle            bool
+	GameID   string
+	IsOracle bool
+
+	// Note this data is passed to gameItem.html template
 	QuestionAnswerPairs []questionAnswerPair
 }
 
-func (data *gameData) getGameBaseTemplate(w http.ResponseWriter, r *http.Request) {
+// Render the game base -- should the first call to the game router.
+func (data *GameData) renderGameBase(w http.ResponseWriter, r *http.Request) {
+	// Render the template with all current data. Ensures late players still get all previous questions and answers.
 	err := gameTemplate.ExecuteTemplate(w, "gameBase.html", gameBaseTemplateData{
 		GameID:              data.gameID,
 		IsOracle:            r.Context().Value("IsOracle").(bool),
@@ -219,6 +224,7 @@ func (data *gameData) getGameBaseTemplate(w http.ResponseWriter, r *http.Request
 	})
 	if err != nil {
 		log.Error().Interface("GameData", data).Err(err).Msg("Failed to write game base template")
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
