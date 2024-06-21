@@ -13,8 +13,11 @@ import (
 )
 
 const (
-	gameID_Length    int           = 12
-	game_maxDuration time.Duration = 24 * time.Hour
+	// Define the length of the GameID in number of runes.
+	gameIDLength int = 16
+
+	// The duration a game is kept alive for. After this duration, the game is removed from the game map.
+	gameDuration time.Duration = 24 * time.Hour
 )
 
 var (
