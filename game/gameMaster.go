@@ -78,9 +78,10 @@ func (master *GameMaster) randomString(length int) string {
 func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	var gameID string
 
+	// Lock the entire gameMapMutex until we are finished making the game, to avoid the (slim) chance we generate the same ID twice.
 	master.gameMapMutex.Lock()
 	for {
-		gameID = master.randomString(gameID_Length)
+		gameID = master.randomString(gameIDLength)
 
 		// If the game ID already exists, try a new ID
 		if _, ok := master.gameMap[gameID]; !ok {
@@ -88,8 +89,12 @@ func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Make a placeholder item so we can overwrite it later, but unlock the mutex ASAP.
+	master.gameMap[gameID] = &GameData{}
+	master.gameMapMutex.Unlock()
+
 	oracleJWTKey := []byte(master.randomString(64))
-	oracleJWTExpiry := time.Now().Add(game_maxDuration)
+	oracleJWTExpiry := time.Now().Add(gameDuration)
 	oracleJWTClaims := &jwt.RegisteredClaims{
 		Issuer:    gameID,
 		Subject:   "oracle",
@@ -98,15 +103,12 @@ func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, oracleJWTClaims)
 	oracleJWTTokenString, _ := token.SignedString(oracleJWTKey)
 
-	data := newGameData(gameID, oracleJWTData{
-		key:         oracleJWTKey,
-		tokenString: oracleJWTTokenString,
-	})
+	data := newGameData(gameID, oracleJWTKey)
 	master.gameMap[gameID] = data
-	master.gameMapMutex.Unlock()
 
+	// Start a goroutine to delete the game after a set duration.
 	go func() {
-		<-time.After(game_maxDuration)
+		<-time.After(gameDuration)
 		log.Info().Str("GameID", gameID).Msg("Deleting Game")
 		master.gameMapMutex.Lock()
 		delete(master.gameMap, gameID)
@@ -115,7 +117,7 @@ func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("NewGameID", gameID).Msg("New Game Created")
 	http.SetCookie(w, &http.Cookie{
-		Name:     "oracleToken-" + gameID,
+		Name:     gameID,
 		Value:    oracleJWTTokenString,
 		Expires:  oracleJWTExpiry,
 		HttpOnly: true,
