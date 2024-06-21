@@ -83,7 +83,8 @@ func (data *GameData) checkRequestFromOracle(r *http.Request) bool {
 	return true
 }
 
-func (data *gameData) checkRequestFromOracleMiddleware(next http.Handler) http.Handler {
+// Middleware to wrap the check for oracleJWT, setting a context value in the request for IsOracle.
+func (data *GameData) checkRequestFromOracleMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), "IsOracle", data.checkRequestFromOracle(r))
 		next.ServeHTTP(w, r.WithContext(ctx))
