@@ -69,3 +69,18 @@ func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/game/%s", newGameData.GameID), http.StatusPermanentRedirect)
 }
 
+func (master *gameMaster) handleGame(w http.ResponseWriter, r *http.Request) {
+	gameIDParam := chi.URLParam(r, "gameID")
+
+	master.gameMapMutex.RLock()
+	targetGameData, ok := master.gameMap[gameIDParam]
+	master.gameMapMutex.RUnlock()
+
+	// If the requested GameID does not exist, return a 404
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	gameBaseTemplate.Execute(w, targetGameData)
+}
