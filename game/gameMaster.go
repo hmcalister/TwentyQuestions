@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/exp/rand"
 )
@@ -38,14 +39,18 @@ type GameMaster struct {
 
 	// Random number generator for the game master.
 	rng *rand.Rand
+
+	// BlueMonday HTML sanitizer -- to be initialized once and passed to games.
+	htmlSanitizer *bluemonday.Policy
 }
 
 // Create a new Game Master and return the struct, including the router to be mounted.
 func NewGameMaster() *GameMaster {
 	master := &GameMaster{
-		Router:  chi.NewRouter(),
-		gameMap: make(map[string]*GameData),
-		rng:     rand.New(rand.NewSource(uint64(time.Now().UnixNano()))),
+		Router:        chi.NewRouter(),
+		gameMap:       make(map[string]*GameData),
+		rng:           rand.New(rand.NewSource(uint64(time.Now().UnixNano()))),
+		htmlSanitizer: bluemonday.UGCPolicy(),
 	}
 
 	// Route to make a new game.
@@ -103,7 +108,7 @@ func (master *GameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, oracleJWTClaims)
 	oracleJWTTokenString, _ := token.SignedString(oracleJWTKey)
 
-	data := newGameData(gameID, oracleJWTKey)
+	data := newGameData(gameID, oracleJWTKey, master.htmlSanitizer)
 	master.gameMap[gameID] = data
 
 	// Start a goroutine to delete the game after a set duration.
