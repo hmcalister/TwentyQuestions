@@ -139,17 +139,22 @@ type GameData struct {
 	sseClientsMutex sync.Mutex
 }
 
-func newGameData(gameID string, oracleJWT oracleJWTData) *gameData {
-	data := &gameData{
+// Create a new game data, including registering routes on router.
+func newGameData(gameID string, oracleJWTKey []byte) *GameData {
+	data := &GameData{
 		gameID:              gameID,
-		oracleJWT:           oracleJWT,
+		oracleJWTKey:        oracleJWTKey,
 		router:              chi.NewRouter(),
-		questionAnswerPairs: make([]questionAnswerPair, 0),
 		gameState:           gameState_AwaitingQuestion,
+		questionAnswerPairs: make([]questionAnswerPair, 0),
+		allResponsesHTML:    "",
+		sseClients:          make([]*sseClient, 0),
 	}
 
+	// Always check if request is from the oracle.
 	data.router.Use(data.checkRequestFromOracleMiddleware)
-	data.router.Get("/"+data.gameID+"/", data.getGameBaseTemplate)
+
+	data.router.Get("/"+data.gameID+"/", data.renderGameBase)
 	data.router.Post("/"+data.gameID+"/submitResponse", data.handleResponse)
 	data.router.Get("/"+data.gameID+"/responsesSourceSSE", data.responsesSourceSSE)
 
