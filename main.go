@@ -67,6 +67,18 @@ func main() {
 
 	staticFS := http.FileServer(http.Dir("static"))
 	router.Handle("/static/*", http.StripPrefix("/static/", staticFS))
+
+	// --------------------------------------------------------------------------------
+	// Home Template
+	// --------------------------------------------------------------------------------
+
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		err := indexTemplate.Execute(w, nil)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to execute indexTemplate")
+		}
+	})
+
 	// --------------------------------------------------------------------------------
 	// Serve
 	// --------------------------------------------------------------------------------
