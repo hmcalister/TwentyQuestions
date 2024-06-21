@@ -71,10 +71,9 @@ func (master *gameMaster) newGame(w http.ResponseWriter, r *http.Request) {
 
 func (master *gameMaster) handleGame(w http.ResponseWriter, r *http.Request) {
 	gameIDParam := chi.URLParam(r, "gameID")
-
 	master.gameMapMutex.RLock()
+	defer master.gameMapMutex.RUnlock()
 	targetGameData, ok := master.gameMap[gameIDParam]
-	master.gameMapMutex.RUnlock()
 
 	// If the requested GameID does not exist, return a 404
 	if !ok {
@@ -82,5 +81,5 @@ func (master *gameMaster) handleGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gameBaseTemplate.Execute(w, targetGameData)
+	targetGameData.router.ServeHTTP(w, r)
 }
