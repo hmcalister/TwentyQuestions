@@ -123,6 +123,30 @@ func newGameData(gameID string, oracleJWT oracleJWTData) *gameData {
 	return data
 }
 
+func (data *gameData) addNextQuestion(question string) error {
+	if data.gameState != gameState_AwaitingQuestion {
+		return errors.New("not currently awaiting question")
+	}
+
+	nextQApair := questionAnswerPair{
+		Index:    len(data.questionAnswerPairs) + 1,
+		Question: question,
+	}
+	data.questionAnswerPairs = append(data.questionAnswerPairs, nextQApair)
+	data.gameState = gameState_AwaitingAnswer
+	return nil
+}
+
+func (data *gameData) addNextAnswer(answer string) error {
+	if data.gameState != gameState_AwaitingAnswer {
+		return errors.New("not currently awaiting answer")
+	}
+
+	data.questionAnswerPairs[len(data.questionAnswerPairs)-1].Answer = answer
+	data.gameState = gameState_AwaitingQuestion
+	return nil
+}
+
 // --------------------------------------------------------------------------------
 // Routing Functions
 // --------------------------------------------------------------------------------
