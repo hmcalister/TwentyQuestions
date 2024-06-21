@@ -2,6 +2,9 @@ package main
 
 import (
 	"flag"
+	"html/template"
+var (
+	indexTemplate    = template.Must(template.New("index.html").ParseFiles("templates/index.html"))
 )
 
 func main() {
