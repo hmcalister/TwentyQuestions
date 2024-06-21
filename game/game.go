@@ -183,7 +183,15 @@ func (data *GameData) addNextQuestion(question string) error {
 	return nil
 }
 
-func (data *gameData) addNextAnswer(answer string) error {
+// Add a new answer. Returns an error if the game is currently awaiting a question instead.
+// Change of state is handled internally by this function.
+func (data *GameData) addNextAnswer(answer string) error {
+	// Ensure the game state is checked atomically.
+	//
+	// If the oracle submits two answers at the same time, one will get the lock and the other is turned away.
+	data.gameStateMutex.Lock()
+	defer data.gameStateMutex.Unlock()
+
 	if data.gameState != gameState_AwaitingAnswer {
 		return errors.New("not currently awaiting answer")
 	}
