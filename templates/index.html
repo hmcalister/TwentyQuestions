@@ -1,15 +1,35 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light dark" />
-    <link rel="stylesheet" href="static/pico.purple.min.css" />
-    <title>Twenty Questions</title>
-  </head>
-  <body>
-    <main class="container">
-      <h1>Twenty Questions</h1>
-    </main>
-  </body>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark" />
+  <link rel="stylesheet" href="static/pico.purple.min.css" />
+  <title>Twenty Questions</title>
+
+  <style>
+    #newGameButtonContainer {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+    }
+
+    #newGameButton {
+      width: 75%;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>Twenty Questions</h1>
+    <hr>
+    <p>Start a new game as the oracle, then send game link to a friend to start guessing.</p>
+    <div id="newGameButtonContainer">
+      <button id="newGameButton">New Game</button>
+    </div>
+  </main>
+</body>
+
 </html>
