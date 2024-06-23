@@ -109,6 +109,8 @@ type sseClient struct {
 	// Context, with cancel indicating if the client has left.
 	context context.Context
 
+	cancelFunc context.CancelFunc
+
 	// Channel to write responses back to user (ensure no newlines!!). Must not be sent data if context is done.
 	responsesChannel chan string
 }
