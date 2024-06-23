@@ -357,6 +357,7 @@ func (data *GameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request)
 	// Atomically add the new client to the clients list -- mutex avoids appending to list while splicing out list in handleResponse handler.
 	data.sseClientsMutex.Lock()
 	data.sseClients = append(data.sseClients, newClient)
+	log.Debug().Int("Total Clients", len(data.sseClients)).Msg("New Client Added")
 	data.sseClientsMutex.Unlock()
 
 	// This goroutine terminates when responsesChannel is closed, which is handled in handleResponse handler when the client context is cancelled (client leaves).
