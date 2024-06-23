@@ -239,6 +239,25 @@ func (data *GameData) addNextAnswer(answer string) error {
 	return nil
 }
 
+func (data *GameData) gameCleanup() {
+	data.sseClientsMutex.Lock()
+	defer data.sseClientsMutex.Unlock()
+
+	// Note this loop does NOT always increment i, as sometimes we splice out a done client and must repeat that index.
+	// If we splice out the last client, the i will now be equal to len(data.sseClients) so the loop will terminate, not overrun its bounds
+	for i := len(data.sseClients) - 1; i >= 0; i-- {
+		currentClient := data.sseClients[i]
+		close(currentClient.responsesChannel)
+		select {
+		case <-currentClient.context.Done():
+		default:
+			currentClient.cancelFunc()
+		}
+	}
+
+	data.sseClients = make([]*sseClient, 0)
+}
+
 // --------------------------------------------------------------------------------
 // Routing Functions
 // --------------------------------------------------------------------------------
