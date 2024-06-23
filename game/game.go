@@ -342,10 +342,15 @@ func (data *GameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request)
 		<-r.Context().Done()
 		return
 	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
 	// Make a new SSE client using the request context and responses channel
 	responsesChannel := make(chan string)
 	newClient := &sseClient{
-		context:          r.Context(),
+		context:          ctx,
+		cancelFunc:       cancel,
 		responsesChannel: responsesChannel,
 	}
 
