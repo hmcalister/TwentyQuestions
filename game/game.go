@@ -328,10 +328,20 @@ func (data *GameData) handleNewResponse(w http.ResponseWriter, r *http.Request) 
 
 // SSE endpoint
 func (data *GameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Msg("New Client SSE Connection")
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	data.gameStateMutex.Lock()
+	isGameOver := data.gameState == gameState_GameOver
+	data.gameStateMutex.Unlock()
+	if isGameOver {
+		fmt.Fprintf(w, "data: %s\n\n", data.allResponsesHTML)
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+		return
+	}
 	// Make a new SSE client using the request context and responses channel
 	responsesChannel := make(chan string)
 	newClient := &sseClient{
