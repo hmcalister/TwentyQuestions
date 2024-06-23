@@ -163,7 +163,7 @@ func newGameData(gameID string, oracleJWTKey []byte, htmlSanitizer *bluemonday.P
 	data.router.Use(data.checkRequestFromOracleMiddleware)
 
 	data.router.Get("/"+data.gameID+"/", data.renderGameBase)
-	data.router.Post("/"+data.gameID+"/submitResponse", data.handleResponse)
+	data.router.Post("/"+data.gameID+"/submitResponse", data.handleNewResponse)
 	data.router.Get("/"+data.gameID+"/responsesSourceSSE", data.responsesSourceSSE)
 	data.router.Get("/"+data.gameID+"/oracleVerdictCorrect", data.oracleVerdictCorrect)
 	data.router.Get("/"+data.gameID+"/oracleVerdictIncorrect", data.oracleVerdictIncorrect)
@@ -237,7 +237,7 @@ func (data *GameData) renderGameBase(w http.ResponseWriter, r *http.Request) {
 // Handle a response in the game -- this function handles both guesser and oracle responses.
 //
 // This function also updates the questionAnswerPairs and allResponsesHTML fields, and sends this data to all SSE clients.
-func (data *GameData) handleResponse(w http.ResponseWriter, r *http.Request) {
+func (data *GameData) handleNewResponse(w http.ResponseWriter, r *http.Request) {
 	response := r.FormValue("response")
 	// response := data.htmlSanitizer.Sanitize(r.FormValue("response"))
 	log.Debug().Str("Game ID", data.gameID).Str("Response", response).Msg("Game Response")
