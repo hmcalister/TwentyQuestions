@@ -171,6 +171,34 @@ func newGameData(gameID string, oracleJWTKey []byte, htmlSanitizer *bluemonday.P
 	return data
 }
 
+func (data *GameData) sendClientsResponseHTML() {
+	// Loop over clients, splice out any that are closed, send to any that are alive.
+
+	log.Debug().Msg("SENDING CLIENTS")
+
+	data.sseClientsMutex.Lock()
+	defer data.sseClientsMutex.Unlock()
+
+	// Note this loop does NOT always increment i, as sometimes we splice out a done client and must repeat that index.
+	// If we splice out the last client, the i will now be equal to len(data.sseClients) so the loop will terminate, not overrun its bounds
+	for i := 0; i < len(data.sseClients); {
+		currentClient := data.sseClients[i]
+		select {
+		// If this client is done, the context is cancelled, and we can close the response channel to clean up some goroutines.
+		case <-currentClient.context.Done():
+			close(currentClient.responsesChannel)
+			// Splice out the done client with the end client. Then remove the end client.
+			// This requires us to look at the current index again, so don't update i.
+			data.sseClients[i] = data.sseClients[len(data.sseClients)-1]
+			data.sseClients = data.sseClients[:len(data.sseClients)-1]
+		default:
+			// This client is still alive, send them the new HTML and move to the next client.
+			currentClient.responsesChannel <- data.allResponsesHTML
+			i += 1
+		}
+	}
+}
+
 // Add a new question. Returns an error if the game is currently awaiting an answer instead.
 // Change of state is handled internally by this function.
 func (data *GameData) addNextQuestion(question string) error {
