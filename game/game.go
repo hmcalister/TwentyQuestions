@@ -368,9 +368,6 @@ func (data *GameData) responsesSourceSSE(w http.ResponseWriter, r *http.Request)
 		}
 	}()
 
-	// Send the current allResponsesHTML to initialize the client
-	responsesChannel <- data.allResponsesHTML
-
 	// Block return until the response is canceled -- ensures the client only makes ONE connection, rather than continually polling.
 	<-r.Context().Done()
 }
@@ -388,7 +385,10 @@ func (data *GameData) oracleVerdictCorrect(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	data.gameStateMutex.Lock()
 	data.gameState = gameState_GameOver
+	defer data.gameStateMutex.Unlock()
+	defer data.gameCleanup()
 
 	var updatedResponsesBytes bytes.Buffer
 	err := gameTemplate.ExecuteTemplate(&updatedResponsesBytes, "gameOver.html", true)
@@ -414,7 +414,10 @@ func (data *GameData) oracleVerdictIncorrect(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	data.gameStateMutex.Lock()
 	data.gameState = gameState_GameOver
+	defer data.gameStateMutex.Unlock()
+	defer data.gameCleanup()
 
 	var updatedResponsesBytes bytes.Buffer
 	err := gameTemplate.ExecuteTemplate(&updatedResponsesBytes, "gameOver.html", false)
