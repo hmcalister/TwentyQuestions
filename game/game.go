@@ -323,30 +323,7 @@ func (data *GameData) handleNewResponse(w http.ResponseWriter, r *http.Request) 
 	}
 	data.allResponsesHTML = updatedResponsesBytes.String()
 	data.allResponsesHTML = strings.ReplaceAll(data.allResponsesHTML, "\n", "")
-
-	// Loop over clients, splice out any that are closed, send to any that are alive.
-
-	data.sseClientsMutex.Lock()
-	defer data.sseClientsMutex.Unlock()
-
-	// Note this loop does NOT always increment i, as sometimes we splice out a done client and must repeat that index.
-	// If we splice out the last client, the i will now be equal to len(data.sseClients) so the loop will terminate, not overrun its bounds
-	for i := 0; i < len(data.sseClients); {
-		currentClient := data.sseClients[i]
-		select {
-		// If this client is done, the context is cancelled, and we can close the response channel to clean up some goroutines.
-		case <-currentClient.context.Done():
-			close(currentClient.responsesChannel)
-			// Splice out the done client with the end client. Then remove the end client.
-			// This requires us to look at the current index again, so don't update i.
-			data.sseClients[i] = data.sseClients[len(data.sseClients)-1]
-			data.sseClients = data.sseClients[:len(data.sseClients)-1]
-		default:
-			// This client is still alive, send them the new HTML and move to the next client.
-			currentClient.responsesChannel <- data.allResponsesHTML
-			i += 1
-		}
-	}
+	data.sendClientsResponseHTML()
 }
 
 // SSE endpoint
@@ -405,27 +382,7 @@ func (data *GameData) oracleVerdictCorrect(w http.ResponseWriter, r *http.Reques
 	}
 	data.allResponsesHTML += updatedResponsesBytes.String()
 	data.allResponsesHTML = strings.ReplaceAll(data.allResponsesHTML, "\n", "")
-
-	data.sseClientsMutex.Lock()
-	defer data.sseClientsMutex.Unlock()
-
-	for i := 0; i < len(data.sseClients); {
-		currentClient := data.sseClients[i]
-		select {
-		// If this client is done, the context is cancelled, and we can close the response channel to clean up some goroutines.
-		case <-currentClient.context.Done():
-			close(currentClient.responsesChannel)
-			// Splice out the done client with the end client. Then remove the end client.
-			// This requires us to look at the current index again, so don't update i.
-			data.sseClients[i] = data.sseClients[len(data.sseClients)-1]
-			data.sseClients = data.sseClients[:len(data.sseClients)-1]
-		default:
-			// This client is still alive, send them the new HTML and move to the next client.
-			currentClient.responsesChannel <- data.allResponsesHTML
-			currentClient.context.Done()
-			i += 1
-		}
-	}
+	data.sendClientsResponseHTML()
 }
 
 // Used when the oracle ends the game with an incorrect verdict
@@ -451,25 +408,5 @@ func (data *GameData) oracleVerdictIncorrect(w http.ResponseWriter, r *http.Requ
 	}
 	data.allResponsesHTML += updatedResponsesBytes.String()
 	data.allResponsesHTML = strings.ReplaceAll(data.allResponsesHTML, "\n", "")
-
-	data.sseClientsMutex.Lock()
-	defer data.sseClientsMutex.Unlock()
-
-	for i := 0; i < len(data.sseClients); {
-		currentClient := data.sseClients[i]
-		select {
-		// If this client is done, the context is cancelled, and we can close the response channel to clean up some goroutines.
-		case <-currentClient.context.Done():
-			close(currentClient.responsesChannel)
-			// Splice out the done client with the end client. Then remove the end client.
-			// This requires us to look at the current index again, so don't update i.
-			data.sseClients[i] = data.sseClients[len(data.sseClients)-1]
-			data.sseClients = data.sseClients[:len(data.sseClients)-1]
-		default:
-			// This client is still alive, send them the new HTML and move to the next client.
-			currentClient.responsesChannel <- data.allResponsesHTML
-			currentClient.context.Done()
-			i += 1
-		}
-	}
+	data.sendClientsResponseHTML()
 }
